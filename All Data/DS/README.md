@@ -1,0 +1,4 @@
+- 👋 Hi, I’m @data-akiran
+- 👀 I’m interested in DE,DA and Modelling  splace
+- 🌱 I’m currently learning Git Version Control
+- 💞️ I’m looking to collaborate on DA
