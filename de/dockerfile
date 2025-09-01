@@ -1,1 +1,16 @@
-ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
+FROM apache/airflow:3.0.6
+
+# Switch to root to install packages
+USER root
+
+# Install all required packages for your DAG
+RUN pip install --no-cache-dir \
+    apache-airflow-providers-postgres \
+    apache-airflow-providers-amazon \
+    pandas \
+    requests \
+    psycopg2-binary \
+    pyarrow
+
+# Switch back to airflow user
+USER airflow

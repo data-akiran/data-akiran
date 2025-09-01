@@ -17,7 +17,8 @@ def extract_from_s3():
 
 def transform_data():
     # Read parquet file instead of CSV
-    df = pd.read_parquet(LOCAL_FILE, nrows=1000)  # limit rows for demo
+    df = pd.read_parquet(LOCAL_FILE)
+    df = df.head(1000)  # Limit rows after reading
     # simple transform: keep only pickup/dropoff datetime + fare
     df = df[["tpep_pickup_datetime", "tpep_dropoff_datetime", "fare_amount"]]
     # Save as CSV for easier loading to Postgres
