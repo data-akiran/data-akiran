@@ -1,0 +1,4 @@
+{"timestamp":"2025-09-07T20:05:12.733420","level":"info","event":"DAG bundles loaded: dags-folder","logger":"airflow.dag_processing.bundles.manager.DagBundlesManager"}
+{"timestamp":"2025-09-07T20:05:12.734591","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/cdm_c360e_dly_email.py","logger":"airflow.models.dagbag.DagBag"}
+{"timestamp":"2025-09-07T20:05:12.756792","level":"error","event":"DAG not found during start up","dag_id":"email_notification_dag_v3","bundle":"BundleInfo(name='dags-folder', version=None)","path":"cdm_c360e_dly_email.py","logger":"task"}
+{"timestamp":"2025-09-07T20:05:12.762491Z","level":"warning","event":"Process exited abnormally","exit_code":1,"logger":"task"}
