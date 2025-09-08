@@ -13,13 +13,13 @@ import os
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Email configuration - Update these with your Outlook credentials
-OUTLOOK_EMAIL = ""
-OUTLOOK_PASSWORD = ""
+# Gmail configuration - Update these with your Gmail credentials
+GMAIL_EMAIL = "nitt.kaditya@gmail.com"
+GMAIL_APP_PASSWORD = ""  # Use App Password, not your regular Gmail password
 
 # Or use environment variables (more secure):
-# OUTLOOK_EMAIL = os.getenv('OUTLOOK_EMAIL', 'your-email@outlook.com')
-# OUTLOOK_PASSWORD = os.getenv('OUTLOOK_PASSWORD', 'your-password')
+# GMAIL_EMAIL = os.getenv('GMAIL_EMAIL', 'your-email@gmail.com')
+# GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD', 'your-app-password')
 
 # Default arguments for the DAG
 default_args = {
@@ -34,50 +34,53 @@ default_args = {
 
 # Create the DAG
 dag = DAG(
-    'enhanced_email_notification_dag',
+    'cdm_c360e_dly_email',
     default_args=default_args,
-    description='Enhanced email DAG with Outlook SMTP fallback and error handling',
+    description='Enhanced email DAG with Gmail SMTP fallback and error handling',
     schedule=None,
     catchup=False,
-    tags=['notification', 'email', 'outlook', 'enhanced']
+    tags=['notification', 'email', 'gmail', 'enhanced']
 )
 
-def send_email_with_outlook(to_emails, subject, html_content, from_email=None):
-    """Send email using Outlook SMTP as fallback"""
+def send_email_with_gmail(to_emails, subject, html_content, from_email=None):
+    """Send email using Gmail SMTP as fallback"""
     try:
-        from_email = from_email or OUTLOOK_EMAIL
-        to_emails = 'adityakiran@gmail.com'
+        from_email = from_email or GMAIL_EMAIL
+        
+        # Ensure to_emails is a list
+        if isinstance(to_emails, str):
+            to_emails = ['data.akiran@gmail.com']
         
         # Create message
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = 'Airflow'
+        msg['Subject'] = subject
         msg['From'] = from_email
-        msg['To'] = ', '.join(to_emails if isinstance(to_emails, list) else [to_emails])
+        msg['To'] = ', '.join(to_emails)
         
         # Add HTML content
         html_part = MIMEText(html_content, 'html', 'utf-8')
         msg.attach(html_part)
         
-        # Connect to Outlook SMTP
-        logger.info("Connecting to Outlook SMTP server...")
-        server = smtplib.SMTP('smtp-mail.outlook.com', 587)
+        # Connect to Gmail SMTP
+        logger.info("Connecting to Gmail SMTP server...")
+        server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()  # Enable encryption
-        server.login(OUTLOOK_EMAIL, OUTLOOK_PASSWORD)
+        server.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
         
         # Send email
         text = msg.as_string()
         server.sendmail(from_email, to_emails, text)
         server.quit()
         
-        logger.info(f"Email sent successfully via Outlook to: {to_emails}")
+        logger.info(f"Email sent successfully via Gmail to: {to_emails}")
         return True
         
     except Exception as e:
-        logger.error(f"Outlook SMTP failed: {str(e)}")
+        logger.error(f"Gmail SMTP failed: {str(e)}")
         return False
 
 def send_email_with_fallback(to_emails, subject, html_content):
-    """Try Airflow's send_email first, then fallback to Outlook SMTP"""
+    """Try Airflow's send_email first, then fallback to Gmail SMTP"""
     try:
         # First, try Airflow's built-in email function
         logger.info("Attempting to send email using Airflow's send_email...")
@@ -91,10 +94,10 @@ def send_email_with_fallback(to_emails, subject, html_content):
         
     except Exception as e:
         logger.warning(f"Airflow send_email failed: {str(e)}")
-        logger.info("Falling back to Outlook SMTP...")
+        logger.info("Falling back to Gmail SMTP...")
         
-        # Fallback to Outlook SMTP
-        return send_email_with_outlook(to_emails, subject, html_content)
+        # Fallback to Gmail SMTP
+        return send_email_with_gmail(to_emails, subject, html_content)
 
 def send_custom_email(**context):
     """Send custom email with enhanced error handling"""
@@ -122,7 +125,7 @@ def send_custom_email(**context):
                     box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
                 }}
                 .header {{ 
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); 
                     color: white; 
                     padding: 20px; 
                     text-align: center; 
@@ -208,7 +211,7 @@ def send_custom_email(**context):
         """
         
         # Send email with fallback mechanism
-        recipients = ['adityakiran01@gmail.com']
+        recipients = ['data.akiran@gmail.com']
         subject = f"Airflow DAG Triggered - {context['dag'].dag_id} - {context['ds']}"
         
         success = send_email_with_fallback(recipients, subject, html_content)
@@ -253,7 +256,7 @@ def send_success_email(**context):
                     box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
                 }}
                 .header {{ 
-                    background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                    background: linear-gradient(135deg, #34a853 0%, #4285f4 100%); 
                     color: white; 
                     padding: 20px; 
                     text-align: center; 
@@ -289,7 +292,7 @@ def send_success_email(**context):
                 .stat-number {{ 
                     font-size: 24px; 
                     font-weight: bold; 
-                    color: #28a745; 
+                    color: #34a853; 
                 }}
                 .stat-label {{ 
                     color: #6c757d; 
@@ -349,7 +352,7 @@ def send_success_email(**context):
         </html>
         """
         
-        recipients = ['adityakiran01@gmail.com']
+        recipients = ['data.akiran@gmail.com']
         subject = f"✅ DAG Execution Complete - {context['dag'].dag_id}"
         
         success = send_email_with_fallback(recipients, subject, html_content)
