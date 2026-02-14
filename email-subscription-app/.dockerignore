@@ -1,0 +1,12 @@
+
+node_modules
+npm-debug.log
+*.db
+.git
+.gitignore
+.env
+.DS_Store
+README.md
+TROUBLESHOOTING.md
+MAC_INSTALLATION.md
+*.md
