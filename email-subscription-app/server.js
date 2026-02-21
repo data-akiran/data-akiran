@@ -11,7 +11,20 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname)));
 
 // Initialize SQLite database
-const db = new sqlite3.Database('./emails.db', (err) => {
+// Initialize SQLite database
+const fs = require('fs');
+const dataDir = path.join(__dirname, 'data');
+
+// Create data directory if it doesn't exist
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log('Created data directory');
+}
+
+const dbPath = path.join(dataDir, 'emails.db');
+console.log(`Database path: ${dbPath}`);
+
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
     } else {
