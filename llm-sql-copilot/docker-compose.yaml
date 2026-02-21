@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: sql-copilot-db
+    environment:
+      POSTGRES_USER: copilot
+      POSTGRES_PASSWORD: copilot123
+      POSTGRES_DB: copilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copilot -d copilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sql-copilot-backend
+    environment:
+      DATABASE_URL: postgresql://copilot:copilot123@postgres:5432/copilot
+      GROQ_API_KEY: YOUR_KEY_HERE
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Streamlit Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sql-copilot-frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+      STREAMLIT_SERVER_FILE_WATCHER_TYPE: none
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
