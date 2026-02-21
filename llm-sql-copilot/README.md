@@ -1,6 +1,6 @@
 # 🤖 LLM SQL Copilot
 
-A full-stack AI-powered SQL assistant that allows users to query databases using natural language. Built with Llama 3, LangChain, FastAPI, PostgreSQL, and Streamlit - all fully dockerized.
+A full-stack AI-powered SQL assistant that allows users to query databases using natural language. Built with Groq (Llama 3.1), FastAPI, PostgreSQL, and Streamlit - all fully dockerized.
 
 ## 🚀 Features
 
@@ -15,9 +15,8 @@ A full-stack AI-powered SQL assistant that allows users to query databases using
 
 ## 🛠️ Technology Stack
 
-- **LLM Runtime**: Ollama
-- **Model**: Llama 3 (8B parameters)
-- **Agent Framework**: LangChain
+- **LLM API**: Groq (cloud-hosted, no local GPU required)
+- **Model**: Llama 3.1 8B Instant
 - **Database**: PostgreSQL 16
 - **Backend API**: FastAPI
 - **Frontend**: Streamlit
@@ -46,8 +45,8 @@ llm-sql-copilot/
 ### Prerequisites
 
 - Docker Desktop installed
-- At least 8GB RAM available
-- 10GB free disk space
+- Groq API key (free at https://console.groq.com)
+- At least 4GB RAM available
 
 ### Installation
 
@@ -62,16 +61,18 @@ cd llm-sql-copilot
 mkdir -p backend frontend init-db
 ```
 
-3. **Add all the files** from the artifacts to their respective directories
+3. **Add all the files** to their respective directories
 
-4. **Start the application**:
-```bash
-docker-compose up -d
+4. **Add your Groq API key** to `docker-compose.yml`:
+```yaml
+backend:
+  environment:
+    GROQ_API_KEY: your_groq_api_key_here
 ```
 
-5. **Wait for Ollama to pull Llama 3** (this takes 5-10 minutes the first time):
+5. **Start the application**:
 ```bash
-docker-compose logs -f ollama-init
+docker compose up -d --build
 ```
 
 6. **Access the application**:
@@ -117,23 +118,31 @@ Try asking these questions:
 
 ### Environment Variables
 
-**Backend (`backend/.env`)**:
+**Backend** (set in `docker-compose.yml`):
 ```env
-DATABASE_URL=postgresql://copilot:copilot123@postgres:5432/sample_data
-OLLAMA_URL=http://ollama:11434
+DATABASE_URL=postgresql://copilot:copilot123@postgres:5432/copilot
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
-**Frontend (`frontend/.env`)**:
+**Frontend** (set in `docker-compose.yml`):
 ```env
 BACKEND_URL=http://backend:8000
+STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
 ```
 
 ### Database Credentials
 
-- **Database**: sample_data
+- **Database**: copilot
 - **Username**: copilot
 - **Password**: copilot123
 - **Port**: 5432
+
+### Getting a Groq API Key
+
+1. Go to https://console.groq.com
+2. Sign up for a free account
+3. Navigate to API Keys → Create API Key
+4. Add the key to your `docker-compose.yml`
 
 ## 📖 API Documentation
 
@@ -149,40 +158,36 @@ Once running, visit http://localhost:8000/docs for interactive API documentation
 
 ## 🐛 Troubleshooting
 
-### Ollama not responding
-```bash
-# Check Ollama logs
-docker-compose logs ollama
-
-# Restart Ollama
-docker-compose restart ollama
-```
-
-### Model not loading
-```bash
-# Check if model is pulled
-docker exec sql-copilot-ollama ollama list
-
-# Manually pull model
-docker exec sql-copilot-ollama ollama pull llama3
-```
-
-### Backend connection errors
+### Backend disconnected
 ```bash
 # Check backend logs
-docker-compose logs backend
+docker compose logs backend
 
-# Verify database is running
-docker-compose ps postgres
+# Verify health
+curl http://localhost:8000/health
 ```
 
-### Database connection issues
+### Database is empty
+If tables exist but have no data, load it manually:
 ```bash
-# Check PostgreSQL logs
-docker-compose logs postgres
+docker exec -i sql-copilot-db psql -U copilot -d copilot < ./init-db/01-create-sample-data.sql
+```
 
-# Connect to database manually
-docker exec -it sql-copilot-db psql -U copilot -d sample_data
+### Database does not exist
+The volume may have been created before the env vars were set:
+```bash
+# Wipe volume and reinitialize
+docker compose down -v
+docker compose up -d
+```
+
+### Streamlit file watcher deadlock (macOS)
+Already handled via `STREAMLIT_SERVER_FILE_WATCHER_TYPE=none` in docker-compose.yml.
+
+### Query timeouts
+The app uses direct Groq API calls (not LangChain agents) for fast responses. If timeouts persist, increase the timeout in `frontend/app.py`:
+```python
+response = requests.post(..., timeout=120)
 ```
 
 ## 🔄 Development
@@ -190,26 +195,24 @@ docker exec -it sql-copilot-db psql -U copilot -d sample_data
 ### Watch logs
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
 ### Restart services
 ```bash
-# Restart all
-docker-compose restart
-
-# Restart specific service
-docker-compose restart backend
+docker compose restart backend
+docker compose restart frontend
 ```
 
 ### Rebuild after code changes
 ```bash
-docker-compose down
-docker-compose up -d --build
+# Delete pycache first
+rm -rf ./backend/__pycache__
+docker compose up -d --build backend
 ```
 
 ## 📊 Monitoring
@@ -217,63 +220,36 @@ docker-compose up -d --build
 ### Check service health
 ```bash
 # Check all containers
-docker-compose ps
+docker compose ps
+
+# Check resource usage
+docker stats --no-stream
 
 # Check backend health
 curl http://localhost:8000/health
-
-# Check Ollama
-curl http://localhost:11434/api/tags
-```
-
-### Resource usage
-```bash
-docker stats
 ```
 
 ## 🛑 Stopping the Application
 
 ```bash
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (database data will be lost)
-docker-compose down -v
+docker compose down -v
 ```
 
 ## 🚀 Scaling Up
 
 ### Use a more powerful model
-Edit `docker-compose.yml` and change the model in `ollama-init`:
-```yaml
-command:
-  - -c
-  - |
-    echo "Pulling Llama 3 70B model..."
-    ollama pull llama3:70b
+Edit `backend/main.py` and change the model:
+```python
+model="llama-3.3-70b-versatile"  # smarter but slower
+model="llama-3.1-8b-instant"     # faster, default
 ```
 
 ### Add more database tables
-Place SQL files in `init-db/` directory. They will be executed on first startup.
-
-### Custom LLM parameters
-Modify `backend/main.py`:
-```python
-llm = Ollama(
-    model="llama3",
-    base_url=OLLAMA_URL,
-    temperature=0,  # Adjust for creativity
-    num_ctx=4096    # Context window size
-)
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+Place SQL files in `init-db/` directory. They will be executed on first startup (fresh volume only).
 
 ## 📝 License
 
@@ -281,17 +257,10 @@ MIT License - feel free to use for your projects!
 
 ## 🙏 Acknowledgments
 
-- Ollama for LLM runtime
-- LangChain for agent framework
+- Groq for fast LLM inference API
 - FastAPI for modern API development
 - Streamlit for rapid UI development
-
-## 📧 Support
-
-For issues and questions:
-- Check the troubleshooting section
-- Review Docker logs
-- Open an issue on GitHub
+- PostgreSQL for reliable data storage
 
 ---
 
